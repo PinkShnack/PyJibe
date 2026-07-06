@@ -262,3 +262,50 @@ def test_set_indentation_depth_manually_infdoublespinbox(qtbot):
         qtbot.keyClicks(war.tab_fit.sp_range_1, text_entered)
         assert war.tab_fit.sp_range_1.value() == resulting_value
     main_window.close()
+
+
+def test_show_fit_line_toggle(qtbot):
+    """Toggle cb_show_fit_line hides/shows the fit line on the plot."""
+    main_window = pyjibe.head.PyJibe()
+    qtbot.addWidget(main_window)
+    main_window.load_data(files=make_directory_with_data(2))
+    war = main_window.subwindows[0].widget()
+    war.cb_autosave.setChecked(0)
+    war.tab_preprocess.set_preprocessing(["compute_tip_position"])
+    war.tab_fit.cb_weight_cp.setCheckState(QtCore.Qt.CheckState.Unchecked)
+    war.on_tab_changed()
+
+    mpl = war.widget_plot_fd.mpl_curve
+    # fit line should be visible by default
+    assert mpl.plots["fit"].get_visible()
+
+    # uncheck the toggle — fit line should disappear
+    war.cb_show_fit_line.setChecked(False)
+    war.on_mpl_curve_update()
+    assert not mpl.plots["fit"].get_visible()
+
+    # re-check — fit line should reappear
+    war.cb_show_fit_line.setChecked(True)
+    war.on_mpl_curve_update()
+    assert mpl.plots["fit"].get_visible()
+    main_window.close()
+
+
+def test_chi_sqr_annotation_shown_after_fit(qtbot):
+    """Chi^2 annotation should be visible after a successful fit."""
+    main_window = pyjibe.head.PyJibe()
+    qtbot.addWidget(main_window)
+    main_window.load_data(files=make_directory_with_data(2))
+    war = main_window.subwindows[0].widget()
+    war.cb_autosave.setChecked(0)
+    war.tab_preprocess.set_preprocessing(["compute_tip_position"])
+    war.tab_fit.cb_weight_cp.setCheckState(QtCore.Qt.CheckState.Unchecked)
+    war.on_tab_changed()
+
+    mpl = war.widget_plot_fd.mpl_curve
+    assert mpl.ann_chi2.get_visible()
+    text = mpl.ann_chi2.get_text()
+    assert text.startswith(r"$\chi^2$")
+    chi2_value = float(text.split("=")[1].strip())
+    assert 0.0 <= chi2_value <= 1.0
+    main_window.close()
